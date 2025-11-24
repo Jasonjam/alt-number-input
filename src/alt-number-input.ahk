@@ -3,16 +3,16 @@ SendMode, Event  ; 用 SendEvent，IME 下較穩
 
 
 ; —— Alt + 數字 ——（用 Numpad，已測可行）
-!1::SendEvent, {Numpad1}
-!2::SendEvent, {Numpad2}
-!3::SendEvent, {Numpad3}
-!4::SendEvent, {Numpad4}
-!5::SendEvent, {Numpad5}
-!6::SendEvent, {Numpad6}
-!7::SendEvent, {Numpad7}
-!8::SendEvent, {Numpad8}
-!9::SendEvent, {Numpad9}
-!0::SendEvent, {Numpad0}
+!1::SendNumLang("1")
+!2::SendNumLang("2")
+!3::SendNumLang("3")
+!4::SendNumLang("4")
+!5::SendNumLang("5")
+!6::SendNumLang("6")
+!7::SendNumLang("7")
+!8::SendNumLang("8")
+!9::SendNumLang("9")
+!0::SendNumLang("0")
 
 
 ; ; —— Alt + 符號 ——（用 vk，避開 IME 組字）
