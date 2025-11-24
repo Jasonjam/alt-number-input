@@ -14,6 +14,11 @@
 
 ## 功能
 
+-   F8：Alt-number 模式開關
+    -   切換是否啟用 Alt+數字輸入功能（使用 Suspend）
+    -   按下後會在主螢幕中央顯示目前狀態：
+        -   `AltNum: ON / OFF`
+    -   熱鍵可在 `Settings.txt` 中自訂（預設為 F8）
 -   Alt + 0–9：在注音輸入法下直接輸出數字
 -   支援常用符號： ( 會直接結束選字 )
     -   `Alt + ,` → `,`
@@ -26,3 +31,12 @@
 
 使用 AutoHotkey2ExePortable 打包成 exe  
 ICON 使用 Affinity 製作
+
+### 使用附帶工具編譯
+
+1. 解壓 `tools/AutoHotkey2ExePortable.zip`
+2. 執行解壓後資料夾內的 `AutoHotkey2ExePortable.exe`
+3. 在工具中設定：
+    - **Source (script file)**：選擇 `src/alt-number-input.ahk`
+    - **Custom Ico(.ico file)**：選擇 `assets/altnum_512px.ico`（非必要）
+4. 按下 `Convert` 產生 exe
