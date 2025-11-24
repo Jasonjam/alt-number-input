@@ -1,5 +1,8 @@
-/build/
+# 編譯後產物
+/src/alt-number-input.exe
 *.zip
+# 排除打包工具
+!tools/AutoHotkey2ExePortable.zip
 *.log
 .DS_Store
 Thumbs.db
