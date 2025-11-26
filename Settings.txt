@@ -1,3 +1,0 @@
-[Hotkeys]
-; 可自訂切換 AltNum 模式的熱鍵，目前預設是F8
-ToggleKey=F8

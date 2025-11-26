@@ -1,39 +1,53 @@
 #InstallKeybdHook
-SendMode, Event  ; 用 SendEvent，IME 下較穩
+SendMode, Event  ; 用 SendEvent，IME 狀況下較穩
 CoordMode, ToolTip, Screen  ; ToolTip 用螢幕座標
 
 ; ========================================
-; 設定檔讀取（ToggleKey 自訂）
+; 設定檔讀取 & 預設值
 ; ========================================
-ConfigFile := A_ScriptDir "\..\Settings.txt"
+ConfigFile := A_ScriptDir "\Settings.txt"
 
-ToggleKey := "F8"  ; 預設值
+; ----- 預設值 -----
+; Hotkey
+ToggleKey := "F8"
+; Tooltip
+g_TooltipType    := "Center"
+g_TooltipCustomX := 0
+g_TooltipCustomY := 0
 
+; 開始讀取參數
 if FileExist(ConfigFile)
 {
-    ;Hotkeys=Section名, ToggleKey=鍵名, F8=找無時的預設
-    IniRead, keyFromFile, %ConfigFile%, Hotkeys, ToggleKey, F8
+    ;IniRead參數, 預存的變數名, 設定檔路徑, [Section]區塊名, 區塊下鍵名, 找無時的預設值
+
+    ; Hotkeys
+    IniRead, ToggleKey, %ConfigFile%, Hotkeys, ToggleKey, F8
+
+    ; Tooltip
+    IniRead, g_TooltipType,    %ConfigFile%, Tooltip, Type,    Center
+    IniRead, g_TooltipCustomX, %ConfigFile%, Tooltip, CustomX, 0
+    IniRead, g_TooltipCustomY, %ConfigFile%, Tooltip, CustomY, 0
 }
 
-; 動態綁定熱鍵
+; ----- 動態綁定 AltNum 開關熱鍵 -----
+; Hotkey參數, <按鍵變數名>, <要執行的標籤或函式>
 Hotkey, %ToggleKey%, ToggleAltNum
+
+
 
 ; =======================
 ; 熱鍵區
 ; =======================
-
 ToggleAltNum: ;整支腳本的熱鍵 on/off（包含 Alt+數字）
     Suspend, Toggle
     ; 顯示目前狀態
     suspended := A_IsSuspended
     msg := suspended ? "AltNum: OFF" : "AltNum: ON"
     
-    pos := GetCenterPos()
+    pos := GetTooltipPos()
     ToolTip, %msg%, % pos.x, % pos.y
-    SetTimer, __HideTip, -1000
+    SetTimer, __HideTip, -1000 ;__HideTip 下詳
 return
-
-
 
 ; =====================================================================
 ; __HideTip:
@@ -61,7 +75,7 @@ return
 !0::SendNumLang("0")
 
 
-; ; —— Alt + 符號 ——（用 vk，避開 IME 組字）
+; —— Alt + 符號 ——（用 vk，避開 IME 組字）
 !-::SendNumLang("-")
 !,::SendNumLang(",") 
 !.::SendNumLang(".")
@@ -74,6 +88,7 @@ return
 ; Functions 區
 ; =======================
 
+; 強制用英文輸出字元 n（避免被注音擋住）
 SendNumLang(n) {
     prev := GetCurrentHKL()                 ; 記住目前語系
     hklEN := LoadHKL("00000409")            ; 英文(美式)
@@ -85,16 +100,35 @@ SendNumLang(n) {
     }
 }
 
+; 取得目前輸入語系（HKL）
 GetCurrentHKL() {
     WinGet, hWnd, ID, A
     thread := DllCall("GetWindowThreadProcessId", "Ptr", hWnd, "UInt*", 0, "UInt")
     return DllCall("GetKeyboardLayout", "UInt", thread, "Ptr")
 }
+
+; 載入指定語系（HKL）
 LoadHKL(hklStr) {
     return DllCall("LoadKeyboardLayout", "Str", hklStr, "UInt", 1, "Ptr")
 }
 
-; 取主螢幕的畫面中心
+; 依設定檔決定 Tooltip 顯示座標
+GetTooltipPos() {
+    global g_TooltipType, g_TooltipCustomX, g_TooltipCustomY
+
+    ; 使用者選 Custom
+    if (g_TooltipType = "Custom") {
+        pos := {}
+        pos.x := g_TooltipCustomX
+        pos.y := g_TooltipCustomY
+        return pos
+    }
+
+    ; 其它情況 ( 預設 Center  )
+    return GetCenterPos()
+}
+
+; 若為Center, 取主螢幕的畫面中心
 GetCenterPos() {
     ; 先取得主螢幕編號
     SysGet, primary, MonitorPrimary

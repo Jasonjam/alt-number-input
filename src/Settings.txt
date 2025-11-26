@@ -1,0 +1,10 @@
+[Hotkeys]
+; 可自訂切換 AltNum 模式的熱鍵, 目前預設是F8
+ToggleKey=F8
+
+[Tooltip]
+; 開關提示: Center / Custom , 預設中央: Center, 自訂位置: Custom
+Type=Center
+; 若 PositionMode=Custom，則以下兩個數字會被使用
+CustomX=500
+CustomY=500
