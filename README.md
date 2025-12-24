@@ -5,7 +5,15 @@
 透過 Alt + 數字鍵 (0–9) 即可直接輸出數字，也支援符號 , . ; -  
 靈感來自 macOS 上的 Fn + 1–9 可直接輸出數字的設計
 
-## 注意
+## 下載
+
+-   下載點: [Latest Ver.](https://github.com/Jasonjam/alt-number-input/releases/latest)
+-   或到右邊 Releases 頁面找最新版本下載 zip 壓縮檔，內容包含:
+    -   `AltNum.exe`
+    -   `settings.txt`
+    -   `assets/`
+
+### 注意
 
 -   Release 的 exe 檔會被防毒或 Microsoft Defender 擋住
     -   可點"其他資訊" > 仍要執行
@@ -27,6 +35,7 @@
 
 -   Alt-number 模式開關: F8 ( 預設 )
 -   開關提示的顯示位置: 主螢幕中央 / 自訂座標
+-   觸發組合鍵: Right Alt(預設)，可自訂 L/R + Ctrl / Alt / Shift
 
 ## 編譯
 
