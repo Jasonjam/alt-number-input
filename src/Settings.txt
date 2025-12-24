@@ -1,3 +1,7 @@
+[General]
+; 以管理員模式啟動: true / false
+adminMode=false
+
 [Hotkeys]
 ; 可自訂切換 AltNum 模式的熱鍵, 目前預設是F8
 ToggleKey=F8
@@ -8,3 +12,10 @@ Type=Center
 ; 若 PositionMode=Custom，則以下兩個數字會被使用
 CustomX=500
 CustomY=500
+
+[TrigKey]
+;自訂觸發的按鍵
+;左右邊或空白: L / R / 留白(不分左右)
+Side=R
+;按鍵: Alt / Ctrl / Shift (只能是這三個)
+Key=Alt
