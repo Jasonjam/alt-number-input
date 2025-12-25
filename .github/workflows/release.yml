@@ -1,0 +1,61 @@
+name: release
+
+on:
+    push:
+        tags:
+            - "v*"
+
+permissions:
+    contents: write
+
+jobs:
+    build-and-release:
+        runs-on: windows-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Prepare output
+              shell: pwsh
+              run: |
+                  if (Test-Path out) { Remove-Item out -Recurse -Force }
+                  New-Item -ItemType Directory -Path out\alt-number-input | Out-Null
+
+            - name: Extract Ahk2Exe portable
+              shell: pwsh
+              run: |
+                  Expand-Archive -Path tools\AutoHotkey2ExePortable.zip -DestinationPath tools\ahk2exe -Force
+
+            - name: Find Ahk2Exe.exe
+              shell: pwsh
+              run: |
+                  $exe = Get-ChildItem -Path tools\ahk2exe -Recurse -Filter Ahk2Exe.exe | Select-Object -First 1
+                  if (-not $exe) { throw "Ahk2Exe.exe not found." }
+                  "AHK2EXE_PATH=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding ascii -Append
+
+            - name: Compile
+              shell: pwsh
+              run: |
+                  & "$env:AHK2EXE_PATH" /in "src\AltNum.ahk" /out "out\alt-number-input\AltNum.exe" /icon "assets\altnum_512px.ico"
+
+            - name: Copy runtime files
+              shell: pwsh
+              run: |
+                  Copy-Item "src\settings.txt" "out\alt-number-input\settings.txt" -Force
+                  Copy-Item "assets" "out\alt-number-input\assets" -Recurse -Force
+
+            - name: Zip
+              shell: pwsh
+              run: |
+                  $tag = "${{ github.ref_name }}"
+                  $zip = "alt-number-input-$tag-windows.zip"
+                  if (Test-Path $zip) { Remove-Item $zip -Force }
+                  Compress-Archive -Path "out\alt-number-input\*" -DestinationPath $zip -Force
+                  "RELEASE_ZIP=$zip" | Out-File -FilePath $env:GITHUB_ENV -Encoding ascii -Append
+
+            - name: Create GitHub Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  files: ${{ env.RELEASE_ZIP }}
+                  generate_release_notes: true
