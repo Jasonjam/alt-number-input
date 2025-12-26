@@ -54,8 +54,24 @@ jobs:
                   Compress-Archive -Path "out\alt-number-input\*" -DestinationPath $zip -Force
                   "RELEASE_ZIP=$zip" | Out-File -FilePath $env:GITHUB_ENV -Encoding ascii -Append
 
-            - name: Create GitHub Release
+            - name: Decide prerelease by tag
+              shell: pwsh
+              run: |
+                  $tag = "${{ github.ref_name }}"
+                  $isRc = $false
+                  if ($tag -match "-rc") { $isRc = $true }
+
+                  "IS_PRERELEASE=$isRc" | Out-File -FilePath $env:GITHUB_ENV -Encoding ascii -Append
+
+                  $makeLatest = $true
+                  if ($isRc) { $makeLatest = $false }
+
+                  "MAKE_LATEST=$makeLatest" | Out-File -FilePath $env:GITHUB_ENV -Encoding ascii -Append
+
+            - name: Publish GitHub Release
               uses: softprops/action-gh-release@v2
               with:
                   files: ${{ env.RELEASE_ZIP }}
                   generate_release_notes: true
+                  prerelease: ${{ env.IS_PRERELEASE }}
+                  make_latest: ${{ env.MAKE_LATEST }}
