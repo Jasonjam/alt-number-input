@@ -3,26 +3,54 @@
 SendMode, Event  ; 用 SendEvent，IME 狀況下較穩
 CoordMode, ToolTip, Screen  ; ToolTip 用螢幕座標
 
+
+; ========================================
+; 專案路徑初始化
+; ========================================
+if (A_IsCompiled) {
+    APP_ROOT := A_ScriptDir
+}
+
+if (!A_IsCompiled) {
+    APP_ROOT := A_ScriptDir "\.."
+}
+
 ; 參數Settings 路徑
-ConfigFile := A_ScriptDir "\Settings.txt"
+ConfigFile := APP_ROOT "\src\Settings.ini"
+
+; 設定檔檢查
+if !FileExist(ConfigFile)
+{
+    MsgBox, 16, Settings Error, Settings.ini not found:`n%ConfigFile%
+    ExitApp
+}
 
 ; ---- 管理員模式檢查 ----
-g_adminMode := "true"  ; 預設值
+IniRead, g_adminMode, %ConfigFile%, General, adminMode, false ; 讀取參數
 
-IniRead, g_adminMode, %ConfigFile%, General, adminMode, true ; 讀取參數
+; 設定檔 adminMode 標準化：去除空白、轉小寫
+StringLower, g_adminMode, g_adminMode
+g_adminMode := Trim(g_adminMode)
 
 if (g_adminMode = "true" || g_adminMode = 1) ; 檢查參數
 {
     if !A_IsAdmin
     {
-        Run *RunAs "%A_AhkPath%" "%A_ScriptFullPath%"
-        ExitApp
+        if (A_IsCompiled) {
+            Run *RunAs "%A_ScriptFullPath%"
+            ExitApp
+        }
+
+        if (!A_IsCompiled) {
+            Run *RunAs "%A_AhkPath%" "%A_ScriptFullPath%"
+            ExitApp
+        }
     }
 }
 
 ; ---- Tray icon (要在adminMode後) ----
-TrayIconOn  := A_ScriptDir "\..\assets\altnum_512px.ico"
-TrayIconOff := A_ScriptDir "\..\assets\altnum_512px-off.ico"
+TrayIconOn  := APP_ROOT "\assets\altnum.ico"
+TrayIconOff := APP_ROOT "\assets\altnum-off.ico"
 Menu, Tray, Icon, %TrayIconOn%
 Menu, Tray, Tip, AltNum. F8: ON / OFF
 if !FileExist(TrayIconOn)
@@ -78,7 +106,20 @@ Hotkey, %ToggleKey%, ToggleAltNum
 
 ; ------ AltNum 熱鍵群組初始化 -----
 ; 預設要輸出的按鍵
-g_AltNumKeys := ["1","2","3","4","5","6","7","8","9","0","-",",",".","/",";"]
+g_AltNumMap := {}
+g_AltNumMap["1"] := "{Numpad1}"
+g_AltNumMap["2"] := "{Numpad2}"
+g_AltNumMap["3"] := "{Numpad3}"
+g_AltNumMap["4"] := "{Numpad4}"
+g_AltNumMap["5"] := "{Numpad5}"
+g_AltNumMap["6"] := "{Numpad6}"
+g_AltNumMap["7"] := "{Numpad7}"
+g_AltNumMap["8"] := "{Numpad8}"
+g_AltNumMap["9"] := "{Numpad9}"
+g_AltNumMap["0"] := "{Numpad0}"
+g_AltNumMap["."] := "{NumpadDot}"
+g_AltNumMap["/"] := "{NumpadDiv}"
+g_AltNumMap["-"] := "{NumpadSub}"
     
 ; - 由 TrigKey 設定決定前綴鍵，例: Side=R, Key=Alt  →  ralt
 ; - 將前綴鍵 + g_AltNumKeys 內的按鍵，動態註冊成熱鍵（prefix & key）
@@ -136,28 +177,9 @@ return
 ; Functions 區
 ; =======================
 
-; 強制用英文輸出字元 n（避免被注音擋住）
-SendNumLang(n) {
-    prev := GetCurrentHKL()                 ; 記住目前語系
-    hklEN := LoadHKL("00000409")            ; 英文(美式)
-    PostMessage, 0x50, 0, %hklEN%, , A      ; WM_INPUTLANGCHANGEREQUEST
-    ; Sleep, 10                               ; 需要時再放開
-    SendInput, {Text}%n%
-    if (prev) {
-        PostMessage, 0x50, 0, %prev%, , A    ; 切回來
-    }
-}
-
-; 取得目前輸入語系（HKL）
-GetCurrentHKL() {
-    WinGet, hWnd, ID, A
-    thread := DllCall("GetWindowThreadProcessId", "Ptr", hWnd, "UInt*", 0, "UInt")
-    return DllCall("GetKeyboardLayout", "UInt", thread, "Ptr")
-}
-
-; 載入指定語系（HKL）
-LoadHKL(hklStr) {
-    return DllCall("LoadKeyboardLayout", "Str", hklStr, "UInt", 1, "Ptr")
+; 使用 Numpad 輸出
+SendNumpadKey(output) {
+    SendInput, %output%
 }
 
 ; 依設定檔決定 Tooltip 顯示座標
@@ -192,41 +214,40 @@ GetCenterPos() {
     return pos
 }
 
-;把設定檔 (Key + Side) 轉成可用的前綴：RAlt / LCtrl ...
+; 把設定檔 (Key + Side) 轉成 AHK 修飾符前綴：! / ^ / + / # / <! / >#
 BuildTriggerPrefix(key, side) {
-    origKey  := Trim(key)
     origSide := Trim(side)
+    origKey  := Trim(key)
 
     ; 轉大小寫: 動作, 輸出變數, 輸入變數
     StringUpper, side, origSide ; 大寫
     StringLower, key, origKey ; 小寫
 
-    ; side 只允許 L / R / 空白
-    if !(side = "" || side = "L" || side = "R") {
-        MsgBox, 16, Settings Error, `nYou set: "%origSide%"
-        ExitApp
-    }
-    
-    ; key 白名單
-    if !(key = "alt" || key = "ctrl" || key = "shift") {
-        MsgBox, 16, Settings Error, `nYou set: "%origKey%"
-        ExitApp
-    }
-    ; side 空白：照你規格回傳 "Alt/Ctrl/Shift"
-    if (side = "")
-        return key
+    ; 轉成熱鍵修飾符格式
+    sideMap := { "": "", "L": "<", "R": ">" }
+    keyMap  := { "alt": "!", "ctrl": "^", "shift": "+", "win": "#" }
 
-    ; side 有值：組合 "LAlt/RAlt/LCtrl/..."
-    return side . key
+    ; 驗證輸入是否合法，Side部分
+    if (!sideMap.HasKey(side)) {
+        MsgBox, 16, Settings Error, Invalid TrigKey Side:`nYou set: "%origSide%"`nAllowed: L / R / blank
+        ExitApp
+    }
+    ; ; 驗證輸入是否合法，Key部分
+    if (!keyMap.HasKey(key)) {
+        MsgBox, 16, Settings Error, Invalid TrigKey Key:`nYou set: "%origKey%"`nAllowed: Alt / Ctrl / Shift / Win
+        ExitApp
+    }
+
+    return sideMap[side] . keyMap[key]
 }
 
 ; 動態註冊
 RegisterAltNumHotkeys(prefix) {
-    global g_AltNumKeys 
+    global g_AltNumMap
 
-    for i, k in g_AltNumKeys {
-        hk := prefix " & " k
-        fn := Func("SendNumLang").Bind(k)
+    for k, output in g_AltNumMap {
+        hk := prefix . k
+        fn := Func("SendNumpadKey").Bind(output)
         Hotkey, %hk%, %fn%, On
     }
 }
