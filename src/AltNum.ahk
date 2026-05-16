@@ -23,12 +23,13 @@ if (!A_IsCompiled) { ; 由 ahk 開啟
 }
 
 ; --- 設定 Settings 路徑 ---
-SettingsFile := APP_ROOT "\src\Settings.ini"
+global SettingsFile := APP_ROOT "\src\Settings.ini"
 ; 設定檔 存在 檢查
 if !FileExist(SettingsFile) {
     MsgBox("Settings.ini not found:`n" SettingsFile, "Settings Error", "Iconx")
     ExitApp
 }
+global GuiPosFile := APP_ROOT "\src\.pos.ini"
 
 ; ========================================
 ; 管理員模式 檢查
@@ -85,10 +86,11 @@ InitTrayMenu() {
 
     A_TrayMenu.Add(Label_Suspend, (*) => ToggleSuspendHandler()) ; 暫停選項
     A_TrayMenu.Add(Label_Reload, (*) => Reload())
-    A_TrayMenu.Add(Label_Gui, (*) => InitGUI())
+    A_TrayMenu.Add(Label_Gui, (*) => mainGui.show()) ; 再次開啟 GUI (非首次執行)
     A_TrayMenu.Add() ; 分隔線
     A_TrayMenu.Add(Label_Exit, (*) => ExitApp())
 
+    A_TrayMenu.Default := Label_Gui
 }
 
 ; ========================================
@@ -132,6 +134,7 @@ GuiLayoutConfig() {
     return cfg
 }
 InitGUI(*) {
+    global mainGui
     ; 呼叫 介面佈局配置
     cfg := GuiLayoutConfig()
 
@@ -159,6 +162,10 @@ InitGUI(*) {
         , "AltNum Settings"
     )
     pageTitle.setFont("s11 Bold") ; 標題字體加大加粗
+
+    ; saveStatus := mainGui.AddText(
+    ;     "x"
+    ; )
 
     ; 分隔線
     mainGui.Add("Text",
@@ -202,7 +209,7 @@ InitGUI(*) {
     mainGui.AddText("x" cfg.marginX " y" getRowY("pauseKey") " w" cfg.titleW " h" cfg.rowH " +0x200", "Pause Key:")
     pauseInput := mainGui.AddEdit("x" cfg.controlX " y" getRowY("pauseKey") " w" cfg.ddlW " h" cfg.rowH)
 
-    ; 底部 分隔線
+    ; --- 底部 分隔線 ---
     lastRowBottomY := getRowY("pauseKey") + cfg.rowH ; 最後一行的底部 Y座標
     cfg.hrY := lastRowBottomY + cfg.hrMarginTop ; ROW 底部 Y + HR margin-top
     cfg.btnY := cfg.hrY + cfg.btnMarginTop ; HR 的Y + Btn margin-top
@@ -213,7 +220,7 @@ InitGUI(*) {
         " h1 BackgroundGray"
     )
 
-    ; 底部 按鈕區
+    ; --- 底部 按鈕區 ---
     btnGap := (cfg.contentW - (cfg.btnW * 2)) / 3 ; 按鈕間距，每顆按鈕的左右一起算
     btnSaveX := cfg.marginX + btnGap
     btnCancelX := btnSaveX + cfg.btnW + btnGap
@@ -249,16 +256,24 @@ InitGUI(*) {
         triggerKey: modifierDDL,
         pauseKey: pauseInput
     }
-    btnSave.OnEvent("Click", (*) => SaveHandler(guiForm))
-    btnCancel.OnEvent("Click", (*) => mainGui.Destroy())
+    btnSave.OnEvent("Click", (*) => SaveHandler(guiForm, mainGui))
+    btnCancel.OnEvent("Click", (*) => mainGui.Hide())
 
     ; 回填 設定的 Value
     ApplyGuiValues(adminOn, adminOff, sideL, sideR, sideAll, modifierDDL, pauseInput)
 
+    ; --- Gui 設定 ---
+    guiX := IniRead(GuiPosFile, "Gui", "x", "")
+    guiY := IniRead(GuiPosFile, "Gui", "y", "")
+    mainGui.OnEvent("Close", (*) => mainGui.Hide())
+
     ; 用 guiH 來計算 margin bottom
     cfg.guiH := cfg.btnY + cfg.btnH + cfg.btnMarginBottom
     ; 設定完成，顯示 GUI
-    mainGui.Show("w" cfg.guiW " h" cfg.guiH)
+    if (guiX = "" || guiY = "") { ; 如果沒有 x y
+        return mainGui.Show("w" cfg.guiW " h" cfg.guiH)
+    }
+    mainGui.Show("x" guiX " y" guiY " w" cfg.guiW " h" cfg.guiH)
 }
 
 ; GUI 控制項回填目前設定值
@@ -281,7 +296,7 @@ ApplyGuiValues(adminOn, adminOff, sideL, sideR, sideAll, modifierDDL, pauseInput
     pauseInput.Value := toggleSuspendKey
 }
 
-SaveHandler(guiForm) {
+SaveHandler(guiForm, mainGui) {
     global SettingsFile
 
     ; 檢查 guiForm 帶來的值，來決定寫入。 用radio裡面有沒有值來決定 (checked)
@@ -382,7 +397,8 @@ LoadSettings(SettingsFile)
 InitTrayMenu()
 InitAltNumMap()
 InitHotkeys()
-InitGUI()
+OnMessage(0x0232, WM_EXITSIZEMOVE) ; 啟用監聽功能 (聽: 視窗移動/縮放)
+InitGUI() ; 執行 APP，多次執行 initGui() 會產生多個 Gui
 return
 
 ; ========================================
@@ -415,7 +431,23 @@ ToggleSuspendHandler(*) {
         TraySetIcon(TrayIconOn) ; ICON
         return
     }
+}
 
+; 紀錄 Gui 座標
+SaveGuiPos(guiObj) {
+    global GuiPosFile
+
+    WinGetPos(&x, &y, , , guiObj)
+
+    IniWrite(x, GuiPosFile, "Gui", "x")
+    IniWrite(y, GuiPosFile, "Gui", "y")
+}
+
+; 視窗移動或調整大小結束
+WM_EXITSIZEMOVE(wParam, lParam, msg, hwnd) {
+    if (hwnd = mainGui.Hwnd) {
+        SaveGuiPos(mainGui)
+    }
 }
 
 ; 修飾鍵符號 組合與轉換

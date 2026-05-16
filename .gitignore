@@ -1,6 +1,9 @@
 # 編譯後產物
 AltNum.exe
 
+# 座標記錄檔
+.pos.ini
+
 # 系統文件
 .DS_Store
 Thumbs.db
