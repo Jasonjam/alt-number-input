@@ -163,14 +163,27 @@ InitGUI(*) {
     )
     pageTitle.setFont("s11 Bold") ; 標題字體加大加粗
 
-    ; saveStatus := mainGui.AddText(
-    ;     "x"
-    ; )
+    ; PIN: Always on top 控制
+    pinAotLabel := mainGui.addText(
+        "x" (cfg.contentW - 18) ; 從右側算起
+        " y" 14
+        " w" 20
+        " h" cfg.rowH
+        , "Pin: "
+    )
+    pinAotLabel.setFont("s8")
+    pinAotCheckbox := mainGui.AddCheckBox(
+        "x" (cfg.contentW + 6)
+        " y" 12
+        " w" 8
+        " h" cfg.rowH
+    )
+    pinAotCheckbox.value := false
 
     ; 分隔線
     mainGui.Add("Text",
         "x" (cfg.marginX - 5)
-        " y" 30
+        " y" 35
         " w" (cfg.contentW + 5)
         " h2 BackgroundGray"
     )
@@ -254,10 +267,14 @@ InitGUI(*) {
             all: sideAll
         },
         triggerKey: modifierDDL,
-        pauseKey: pauseInput
+        pauseKey: pauseInput,
     }
+    ; 綁定事件
     btnSave.OnEvent("Click", (*) => SaveHandler(guiForm, mainGui))
     btnCancel.OnEvent("Click", (*) => mainGui.Hide())
+    pinAotLabel.OnEvent("Click", (*) => pinAotLabelClickHandler(mainGui, pinAotCheckbox)) ; label for checkbox
+    pinAotLabel.OnEvent("DoubleClick", (*) => pinAotLabelClickHandler(mainGui, pinAotCheckbox)) ; 快速點擊更順暢
+    pinAotCheckbox.OnEvent("Click", (*) => TogglePin(mainGui, pinAotCheckbox))
 
     ; 回填 設定的 Value
     ApplyGuiValues(adminOn, adminOff, sideL, sideR, sideAll, modifierDDL, pauseInput)
@@ -431,6 +448,15 @@ ToggleSuspendHandler(*) {
         TraySetIcon(TrayIconOn) ; ICON
         return
     }
+}
+
+; 切換 Pin: AOT 的狀態
+TogglePin(guiObj, pinAotCheckbox) {
+    guiObj.Opt(pinAotCheckbox.Value ? "+AlwaysOnTop" : "-AlwaysOnTop")
+}
+pinAotLabelClickHandler(guiObj, pinAotCheckbox) {
+    pinAotCheckbox.Value := !pinAotCheckbox.Value,
+        TogglePin(mainGui, pinAotCheckbox)
 }
 
 ; 紀錄 Gui 座標
