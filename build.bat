@@ -2,13 +2,14 @@
 chcp 65001 >nul
 cd /d "%~dp0"
 
-set "SOURCE=%CD%\src\AltNum.ahk1"
+set "SOURCE=%CD%\src\AltNum.ahk"
 set "OUT_EXE=%CD%\AltNum.exe"
 
-set "ICON_ON=%CD%\assets\altnum.ico"
+set "ICON=%CD%\assets\altnum.ico"
 
-set "AHK2EXE=%CD%\tools\AutoHotkey\Compiler\Ahk2Exe.exe"
-set "BASE=%CD%\tools\AutoHotkey\Compiler\Unicode 32-bit.bin"
+set "COMPILER=tools\AutoHotkey\Compiler\Ahk2Exe.ahk"
+set "V2_BASE=tools\AutoHotkey\AutoHotkey64.exe"
+SET "V1_ENGINE=tools\AutoHotkey\AutohotkeyU64.exe"
 
 echo.
 echo ================================
@@ -31,28 +32,45 @@ if not exist "%SOURCE%" (
     exit /b 1
 )
 
-if not exist "%ICON_ON%" (
+if not exist "%ICON%" (
     echo.
     echo [ERROR] 找不到ICO圖檔 / Icon not found:
-    echo %ICON_ON%
+    echo %ICON%
     pause
     exit /b 1
 )
 
-if not exist "%AHK2EXE%" (
+if not exist "%COMPILER%" (
     echo.
-    echo [ERROR] 找不到 Ahk2Exe.exe / Ahk2Exe.exe not found:
-    echo %AHK2EXE%
+    echo [ERROR] 找不到 Ahk2Exe.ahk / Ahk2Exe.ahk not found:
+    echo %COMPILER%
     pause
     exit /b 1
 )
 
-if not exist "%BASE%" (
+if not exist "%V1_ENGINE%" (
     echo.
-    echo [ERROR] 找不到 Base 檔案 / Base file not found:
-    echo %BASE%
+    echo [ERROR] 找不到 v1Engine / v1Engine not found:
+    echo %V1_ENGINE%
     pause
     exit /b 1
+)
+
+if not exist "%V2_BASE%" (
+    echo.
+    echo [ERROR] 找不到 v2Base: AutoHotkey64.exe 檔案 / v2Base: AutoHotkey64.exe file not found:
+    echo %V2_BASE%
+    pause
+    exit /b 1
+)
+
+if exist "src\.pos.ini.template" (
+    if not exist "src\.pos.ini" (
+        copy "src\.pos.ini.template" "src\.pos.ini" >nul
+        echo [CRTE]  已建立 .pos.ini / Created .pos.ini
+    ) else (
+        echo [SKIP] .pos.ini 已存在 / .pos.ini already exists
+    )
 )
 
 echo [OK]  必要檔案檢查完成 / Required files found
@@ -72,7 +90,8 @@ echo.
 
 
 echo [3/4] 開始編譯 / Compiling AltNum...
-"%AHK2EXE%" /in "%SOURCE%" /out "%OUT_EXE%" /icon "%ICON_ON%" /base "%BASE%"
+:: 使用引號包覆所有路徑，並確保參數順序正確
+"%V1_ENGINE%" "%COMPILER%" /in "%SOURCE%" /out "%OUT_EXE%" /icon "%ICON%" /base "%V2_BASE%"
 
 if errorlevel 1 (
     echo [ERROR] 編譯失敗 / Compile failed.
