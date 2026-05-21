@@ -86,7 +86,7 @@ InitTrayMenu() {
 
     A_TrayMenu.Add(Label_Suspend, (*) => ToggleSuspendHandler()) ; 暫停選項
     A_TrayMenu.Add(Label_Reload, (*) => Reload())
-    A_TrayMenu.Add(Label_Gui, (*) => mainGui.show()) ; 再次開啟 GUI (非首次執行)
+    A_TrayMenu.Add(Label_Gui, (*) => mainGui.Show()) ; 再次開啟 GUI (非首次執行)
     A_TrayMenu.Add() ; 分隔線
     A_TrayMenu.Add(Label_Exit, (*) => ExitApp())
 
@@ -246,7 +246,7 @@ InitGUI(*) {
         " h" cfg.btnH
         , "Save"
     )
-    btnSave.SetFont("bold")
+    btnSave.SetFont("Bold")
     btnCancel := mainGui.AddButton(
         "x" btnCancelX
         " y" cfg.btnY
@@ -455,8 +455,8 @@ TogglePin(guiObj, pinAotCheckbox) {
     guiObj.Opt(pinAotCheckbox.Value ? "+AlwaysOnTop" : "-AlwaysOnTop")
 }
 pinAotLabelClickHandler(guiObj, pinAotCheckbox) {
-    pinAotCheckbox.Value := !pinAotCheckbox.Value,
-        TogglePin(mainGui, pinAotCheckbox)
+    pinAotCheckbox.Value := !pinAotCheckbox.Value
+    TogglePin(guiObj, pinAotCheckbox)
 }
 
 ; 紀錄 Gui 座標
@@ -471,6 +471,7 @@ SaveGuiPos(guiObj) {
 
 ; 視窗移動或調整大小結束
 WM_EXITSIZEMOVE(wParam, lParam, msg, hwnd) {
+    global mainGui
     if (hwnd = mainGui.Hwnd) {
         SaveGuiPos(mainGui)
     }
