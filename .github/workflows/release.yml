@@ -40,7 +40,8 @@ jobs:
               shell: pwsh
               run: |
                   $tag = "${{ github.ref_name }}"
-                  $zip = "AltNum-$tag.zip"
+                  $version = $tag -replace "^v", ""
+                  $zip = "AltNum-$version.zip"
 
                   if (Test-Path $zip) {
                       Remove-Item $zip -Force
