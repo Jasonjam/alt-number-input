@@ -66,9 +66,10 @@ if not exist "%V2_BASE%" (
 
 if exist "src\.pos.ini.template" (
     if not exist "src\.pos.ini" (
-        copy "src\.pos.ini.template" "src\.pos.ini" >nul
+        move "src\.pos.ini.template" "src\.pos.ini" >nul
         echo [CRTE]  已建立 .pos.ini / Created .pos.ini
     ) else (
+        del "src\.pos.ini.template"
         echo [SKIP] .pos.ini 已存在 / .pos.ini already exists
     )
 )
