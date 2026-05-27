@@ -23,13 +23,16 @@ if (!A_IsCompiled) { ; 由 ahk 開啟
 }
 
 ; --- 設定 Settings 路徑 ---
-global SettingsFile := APP_ROOT "\src\Settings.ini"
-; 設定檔 存在 檢查
-if !FileExist(SettingsFile) {
-    MsgBox("Settings.ini not found:`n" SettingsFile, "Settings Error", "Iconx")
-    ExitApp
-}
-global GuiPosFile := APP_ROOT "\src\.pos.ini"
+; global SettingsFile := APP_ROOT "\src\Settings.ini"
+; ; 設定檔 存在 檢查
+; if !FileExist(SettingsFile) {
+;     MsgBox("Settings.ini not found:`n" SettingsFile, "Settings Error", "Iconx")
+;     ExitApp
+; }
+; global GuiPosFile := APP_ROOT "\src\.pos.ini"
+
+global SettingsFile := CheckLocalFile("Settings")
+global GuiPosFile := CheckLocalFile(".pos")
 
 ; ========================================
 ; 管理員模式 檢查
@@ -126,10 +129,12 @@ GuiLayoutConfig() {
     cfg.contentW := cfg.guiW - (cfg.marginX * 2) ; Content 寬度 = GUI總寬 - (左右邊距 * 2)
 
     ; 排序給 getRowY
-    cfg.rowIndex := Map("adminMode", 0,
+    cfg.rowIndex := Map(
+        "adminMode", 0,
         "triggerSide", 1,
         "triggerKey", 2,
-        "pauseKey", 3)
+        "pauseKey", 3
+    )
 
     return cfg
 }
@@ -530,4 +535,28 @@ RegisterAltNumHotkeys(TriggerModifierSymbol) {
 ; 熱鍵觸發後，送出映射後的按鍵
 SendMappedKey(outputKey, *) {
     SendInput(outputKey)
+}
+
+; 讀取 本地 設定檔
+CheckLocalFile(fileName) {
+    localFile := APP_ROOT "\src\" fileName ".local.ini" ; local 設定檔
+    defaultFile := APP_ROOT "\src\" fileName ".ini" ; 普通 設定檔
+
+    activeFile := defaultFile
+
+    ; 若 local 存在
+    if FileExist(localFile) {
+        activeFile := localFile
+    }
+
+    ; 最後檢查
+    if !FileExist(activeFile) {
+        MsgBox(
+            fileName ".ini not found:`n" activeFile,
+            "Settings Error",
+            "Iconx"
+        )
+        ExitApp
+    }
+    return activeFile
 }
