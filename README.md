@@ -24,13 +24,17 @@
 - 預設 `RAlt + 0–9`：在注音輸入法下直接輸出數字
 - 支援數字鍵盤常見符號：
     - `Alt + .` → `.`
+    - `Alt + ,` → `,`
     - `Alt + -` → `-`
     - `Alt + /` → `/`
+    - `Alt + =` → `=`
 - 重新載入程式: `RCtrl + F5`
 
 ## 設定頁
 
 - Admin Mode: 以管理員模式啟動 (建議開啟)
+- Zenkaku Block: 阻擋全形，`Shift + Space`改成輸出一般空格
+    - 啟用前請先確認目前是半形
 - Trigger Side: 左 / 右 / 不設限 (預設 All)
 - Trigger Key: 選擇修飾鍵 (預設 Alt)
 - Pause Key: 暫停開關 (預設 F8)
