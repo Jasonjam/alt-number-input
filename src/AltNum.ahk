@@ -23,10 +23,12 @@ if (!A_IsCompiled) { ; 由 ahk 開啟
 }
 
 ; --- 設定 Settings 路徑 ---
-
 global SettingsFile := CheckLocalFile("Settings")
 global GuiPosFile := CheckLocalFile(".pos")
 
+; --- 全域變數 ---
+global labelToolTipMap := Map() ; 用來存放 label 的 tooltip 提示
+global g_Settings := {} ; 統一管理 LoadSettings() 載入的設定快取
 ; ========================================
 ; 管理員模式 檢查
 ; ========================================
@@ -127,7 +129,7 @@ GuiLayoutConfig() {
     return cfg
 }
 
-global labelToolTipMap := Map() ; 用來存放 label 的 tooltip 提示
+; Gui 初始化
 InitGUI(*) {
     global mainGui
 
@@ -273,7 +275,7 @@ InitGUI(*) {
         , "Cancel"
     )
 
-    ; 綁定按鈕事件
+    ; Gui 控制項集合，方便傳給其他 FN 使用
     guiForm := {
         adminMode: {
             on: adminOn,
@@ -298,8 +300,8 @@ InitGUI(*) {
     pinAotLabel.OnEvent("DoubleClick", (*) => pinAotLabelClickHandler(mainGui, pinAotCheckbox)) ; 快速點擊更順暢
     pinAotCheckbox.OnEvent("Click", (*) => TogglePin(mainGui, pinAotCheckbox))
 
-    ; 回填 設定的 Value
-    ApplyGuiValues(adminOn, adminOff, zenkakuBlockOn, zenkakuBlockOff, sideL, sideR, sideAll, modifierDDL, pauseInput)
+    ; 回填 設定的 Value 到 GUI 中
+    ApplySettingsToGui(guiForm)
 
     ; --- Gui 設定 ---
     guiX := IniRead(GuiPosFile, "Gui", "x", "")
@@ -316,26 +318,24 @@ InitGUI(*) {
 }
 
 ; GUI 控制項回填目前設定值
-ApplyGuiValues(adminOn, adminOff, zenkakuBlockOn, zenkakuBlockOff, sideL, sideR, sideAll, modifierDDL, pauseInput) {
-    global g_adminMode
-    global g_TrigSide
-    global g_TrigModifier
-    global toggleSuspendKey
-    global g_zenkakuBlock
+ApplySettingsToGui(guiForm) {
+    global g_Settings
 
-    isAdminMode := (StrLower(Trim(g_adminMode)) = "true" || g_adminMode = "1")
-    adminOn.Value := isAdminMode
-    adminOff.Value := !isAdminMode
+    isAdminMode := (StrLower(Trim(g_Settings.adminMode)) = "true" || g_Settings.adminMode = "1")
+    guiForm.adminMode.on.Value := isAdminMode
+    guiForm.adminMode.off.Value := !isAdminMode
 
-    zenkakuBlockOn.Value := (g_zenkakuBlock = "true")
+    isZenkakuBlock := (StrLower(Trim(g_Settings.zenkakuBlock)) = "true" || g_Settings.zenkakuBlock = "1")
+    guiForm.zenkakuBlock.on.Value := isZenkakuBlock
+    guiForm.zenkakuBlock.off.Value := !isZenkakuBlock
 
-    trigSide := StrUpper(Trim(g_TrigSide))
-    sideL.Value := trigSide = "L"
-    sideR.Value := trigSide = "R"
-    sideAll.Value := trigSide = "ALL"
+    trigSide := StrUpper(Trim(g_Settings.trigSide))
+    guiForm.triggerSide.L.Value := (trigSide = "L")
+    guiForm.triggerSide.R.Value := (trigSide = "R")
+    guiForm.triggerSide.all.Value := (trigSide = "ALL")
 
-    modifierDDL.Text := g_TrigModifier
-    pauseInput.Value := toggleSuspendKey
+    guiForm.triggerKey.Text := g_Settings.trigModifier
+    guiForm.pauseKey.Value := g_Settings.toggleSuspendKey
 }
 
 SaveHandler(guiForm, mainGui) {
@@ -345,7 +345,7 @@ SaveHandler(guiForm, mainGui) {
     ; admin mode
     adminMode := guiForm.adminMode.on.Value ? "true" : "false"
 
-    ; sankaku block
+    ; zankaku block
     zenkakuBlock := guiForm.zenkakuBlock.on.Value ? "true" : "false"
 
     ; trigger side.
@@ -379,44 +379,44 @@ SaveHandler(guiForm, mainGui) {
 ; 設定檔讀取 & 預設值
 ; ========================================
 LoadSettings(SettingsFile) { ; 以防沒讀到Settings
-    global ToggleSuspendKey
-    global g_TrigSide, g_TrigModifier
-    global g_adminMode
-    global g_zenkakuBlock
+    global g_Settings
 
-    ; Suspend Toggle key
-    ToggleSuspendKey := IniRead(SettingsFile, "Hotkeys", "ToggleSuspendKey", "F8") ; 預設 F8
-    ; TrigKey
-    g_TrigSide := IniRead(SettingsFile, "TrigKey", "Side", "R") ; Side 預設 R
-    g_TrigModifier := IniRead(SettingsFile, "TrigKey", "Modifier", "Alt") ; Modifier 預設 Alt
+    ; 讀取設定檔，並存到 全域變數 g_Settings 中
+    g_Settings := {
+        ; Admin Mode
+        adminMode: IniRead(SettingsFile, "General", "AdminMode", "false"), ; 預設 false
+        ; Zenkaku Block
+        zenkakuBlock: IniRead(SettingsFile, "Hotkeys", "ZenkakuBlock", "false"), ; 預設 false
+        ; Suspend Toggle key
+        toggleSuspendKey: IniRead(SettingsFile, "Hotkeys", "ToggleSuspendKey", "F8"), ; 預設 F8
+        ; TrigKey
+        trigSide: IniRead(SettingsFile, "TrigKey", "Side", "R"), ; Side 預設 R
+        trigModifier: IniRead(SettingsFile, "TrigKey", "Modifier", "Alt"), ; Modifier 預設 Alt
+    }
 
-    ; Zenkaku Block
-    g_zenkakuBlock := IniRead(SettingsFile, "Hotkeys", "ZenkakuBlock", "false") ; 預設 false
-
-    ;Admin
-    g_adminMode := IniRead(SettingsFile, "General", "AdminMode", "false")
 }
 
 ; ========================================
 ; 熱鍵註冊 動態綁定 初始化
 ; ========================================
 InitHotkeys() {
-    global ToggleSuspendKey
-    global g_TrigSide, g_TrigModifier
-    global g_zenkakuBlock
+    global g_Settings
 
     ; --- 一般熱鍵 ---
     ; Reload
     Hotkey("RCtrl & F5", (*) => Reload())
     ; 全形 停用
-    Hotkey("+Space", (*) => Send(" "), g_zenkakuBlock = "true" ? "On" : "Off")
+    Hotkey("+Space", (*) => Send(" "), g_Settings.zenkakuBlock = "true" ? "On" : "Off")
 
     ; 動態綁定寫法: Hotkey, <按鍵變數名>, <要執行的標籤或函式>
-    Hotkey(ToggleSuspendKey, ToggleSuspendHandler, "On S") ; 註冊暫停熱鍵，S = Suspend exempt，"On S" 為固定字眼
+    Hotkey(g_Settings.toggleSuspendKey, ToggleSuspendHandler, "On S") ; 註冊暫停熱鍵，S = Suspend exempt，"On S" 為固定字眼
 
     ; --- AltNum 熱鍵 ---
     ; 組裝修飾鍵，並轉成修飾鍵符號
-    TriggerModifierSymbol := CreateTriggerModifierSymbol(g_TrigSide, g_TrigModifier) ; 組裝並轉化後，把結果存成變數
+    TriggerModifierSymbol := CreateTriggerModifierSymbol(  ; 組裝並轉化後，把結果存成變數
+        g_Settings.trigSide,
+        g_Settings.trigModifier
+    )
 
     ; 動態註冊成熱鍵 (為初始化的最後一步)，觸發後由 SendNumpadKey 函式處理
     RegisterAltNumHotkeys(TriggerModifierSymbol)
@@ -615,8 +615,4 @@ CheckLocalFile(fileName) {
         ExitApp
     }
     return activeFile
-}
-
-zenkakuBlockHandler() {
-
 }
